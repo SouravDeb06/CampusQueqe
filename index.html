@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusQueue • Digital Food Pass</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,Arial,sans-serif;background:#f4fbf7;color:#17352a;min-height:100vh}
+header{background:#087f5b;color:#fff;padding:20px 7%;display:flex;justify-content:space-between;align-items:center}
+.brand{font-size:1.2rem;font-weight:800}.header-right{display:flex;align-items:center;gap:10px}
+.status{background:rgba(255,255,255,.16);padding:7px 13px;border-radius:999px;font-size:.82rem}
+.switch-btn{background:#fff;color:#087f5b;border:0;padding:8px 13px;border-radius:9px;font-weight:800;cursor:pointer;display:none}
+main{width:min(1150px,92%);margin:35px auto 60px}
+.welcome-screen,.login-screen{min-height:75vh;display:flex;align-items:center;justify-content:center}
+.login-screen{display:none}
+.welcome-card,.login-card{background:#fff;width:min(700px,100%);text-align:center;padding:50px 35px;border-radius:25px;border:1px solid #dcebe4;box-shadow:0 15px 40px rgba(19,70,50,.1)}
+.login-card{width:min(430px,100%);text-align:left;padding:35px}
+.welcome-icon{width:65px;height:65px;margin:0 auto 20px;border-radius:18px;background:#e5f6ee;color:#087f5b;display:flex;align-items:center;justify-content:center;font-size:30px}
+.welcome-card h1{font-size:clamp(2rem,5vw,3rem);margin-bottom:12px}.welcome-card p{color:#687b73;margin-bottom:30px;font-size:1.05rem}
+.role-buttons{display:grid;grid-template-columns:1fr 1fr;gap:18px}.role-btn{padding:22px;border:1px solid #d8eae2;border-radius:17px;background:#f8fcfa;color:#17352a;cursor:pointer}
+.role-btn:hover{transform:translateY(-3px);border-color:#087f5b;box-shadow:0 8px 20px rgba(8,127,91,.12)}
+.role-btn .emoji{font-size:30px;display:block;margin-bottom:9px}.role-btn strong{display:block;font-size:1.05rem;margin-bottom:5px}.role-btn span{font-size:.84rem;color:#71837b}
+.login-card h2{margin-bottom:8px}.login-card p{color:#71837b;margin-bottom:22px}.login-card label{display:block;font-weight:700;margin-bottom:7px;font-size:.9rem}
+.login-card input,.scanner-input{width:100%;padding:13px;border:1px solid #cfe1d9;border-radius:11px;font-size:1rem;outline:none}
+.login-card input:focus,.scanner-input:focus{border-color:#087f5b;box-shadow:0 0 0 3px rgba(8,127,91,.1)}
+.error{color:#c0392b;font-size:.85rem;min-height:20px;margin:8px 0}.back-btn{margin-top:12px;background:transparent;color:#087f5b;border:0;cursor:pointer;font-weight:700;width:100%}
+.app-content{display:none}.hero{margin-bottom:28px}.hero h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.05;margin-bottom:10px}.hero p{color:#5d7168;font-size:1.05rem}
+.role-badge{display:inline-block;margin-top:12px;padding:6px 11px;background:#e5f6ee;color:#087f5b;border-radius:999px;font-size:.8rem;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.card{background:#fff;border:1px solid #dcebe4;border-radius:20px;padding:26px;box-shadow:0 10px 30px rgba(19,70,50,.08)}.card.wide{grid-column:span 2}
+.label{color:#668076;font-size:.86rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.token{font-size:clamp(3rem,7vw,5rem);font-weight:900;color:#087f5b;margin:5px 0 15px}
+.stats{display:flex;gap:15px}.stat{flex:1;background:#eff9f4;border-radius:15px;padding:18px}.stat strong{display:block;font-size:2rem}.stat span{color:#688076;font-size:.9rem}
+h2{font-size:1.35rem;margin-bottom:7px}.desc{color:#6b7c75;margin-bottom:20px;line-height:1.5}
+button{transition:.2s}button:hover{transform:translateY(-2px)}
+.primary,.dark,.scan-btn,.approve-btn,.handover-btn{width:100%;border:0;border-radius:13px;padding:14px 18px;font-size:1rem;font-weight:800;cursor:pointer}
+.primary,.scan-btn{background:#087f5b;color:#fff}.primary:hover,.scan-btn:hover{background:#066c4d}.dark{background:#17352a;color:#fff}
+.result{display:none;margin-top:18px;background:#eff9f4;border:1px solid #cde8dc;border-radius:15px;padding:16px}.result.show{display:block}
+.result-token{font-size:1.8rem;font-weight:900;color:#087f5b}.wait{margin-top:4px;color:#587067}
+.ticket{margin-top:18px;border:2px solid #dbece4;border-radius:18px;padding:18px;text-align:center;background:#fbfefc}
+.qr-box{width:150px;height:150px;margin:12px auto;background:#fff;border:7px solid #17352a;padding:8px;display:flex;align-items:center;justify-content:center}
+.qr-grid{width:100%;height:100%;background:
+repeating-linear-gradient(90deg,#17352a 0 5px,#fff 5px 10px),
+repeating-linear-gradient(0deg,transparent 0 7px,#17352a 7px 11px);opacity:.9}
+.ticket-message{font-weight:800;font-size:.92rem;margin:10px 0;color:#38564a}
+.awaiting{display:inline-block;background:#fff0ef;color:#c0392b;border:1px solid #f2c4c0;padding:7px 11px;border-radius:999px;font-size:.82rem;font-weight:900}
+.digital-pass{display:none;margin-top:18px;border-radius:18px;padding:24px;background:#12a66f;color:white;text-align:center;box-shadow:0 10px 25px rgba(18,166,111,.25)}
+.digital-pass.show{display:block}.digital-pass h3{font-size:1.65rem;margin-bottom:10px}.digital-pass p{line-height:1.5}.pass-token{font-size:2rem;font-weight:900;margin:10px}
+.scanner{margin-top:18px;padding-top:18px;border-top:1px solid #e2eee8}.scanner label{display:block;font-weight:700;font-size:.85rem;margin-bottom:8px}
+.scanner-row{display:flex;gap:8px}.scanner-row .scanner-input{flex:1}.scanner-row .scan-btn{width:auto;white-space:nowrap}
+.verification{display:none;margin-top:14px;border-radius:14px;padding:16px;background:#eff9f4;border:1px solid #bfe3d2}.verification.show{display:block}
+.valid{font-weight:900;color:#087f5b;margin-bottom:5px}.approve-btn{background:#0a9b68;color:#fff;margin-top:13px}
+.ready-list{margin-top:20px}.ready-list h3{font-size:1rem;margin-bottom:10px}.ready-item{padding:13px;border:1px solid #cde8dc;background:#f5fcf8;border-radius:12px;margin-bottom:9px}
+.ready-item-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.ready-token{font-weight:900;color:#087f5b}.ready-status{font-size:.75rem;font-weight:800;color:#087f5b}
+.handover-btn{background:#17352a;color:#fff;padding:10px 12px;font-size:.85rem}.empty{color:#788a82;font-size:.88rem;padding:10px 0}
+.queue-list{margin-top:20px;max-height:190px;overflow-y:auto;border-top:1px solid #e3eee9}.queue-item{display:flex;justify-content:space-between;padding:12px 3px;border-bottom:1px solid #edf3f0;color:#52675e}
+footer{text-align:center;color:#7b8c85;font-size:.85rem;margin-top:35px}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.card.wide{grid-column:span 1}header{padding:18px 5%}main{margin-top:25px}}
+@media(max-width:600px){.role-buttons{grid-template-columns:1fr}.welcome-card{padding:38px 22px}.status{display:none}.header-right{margin-left:auto}.scanner-row{flex-direction:column}.scanner-row .scan-btn{width:100%}}
+
+.auth-notification{
+  margin-top:14px;padding:14px 16px;border-radius:14px;
+  background:#ecfdf5;border:1px solid #86efac;color:#166534;
+  text-align:left;box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+.notify-title{font-weight:800;font-size:16px;margin-bottom:5px}
+.notify-time{font-size:12px;margin-top:6px;opacity:.75}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">window.addEventListener("load", restoreStudentTicket);\n</script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="brand">CampusQueue</div>
+  <div class="header-right">
+    <div class="status">● System Online</div>
+    <button class="switch-btn" id="switchBtn" onclick="logout()">Logout / Switch View</button>
+  </div>
+</header>
+
+<main>
+<section class="welcome-screen" id="welcomeScreen">
+  <div class="welcome-card">
+    <div class="welcome-icon">🏫</div>
+    <h1>Welcome to CampusQueue</h1>
+    <p>Digital queue and food authentication for students and campus staff.</p>
+    <h3 style="margin-bottom:18px">Are you a Student or a Staff Member?</h3>
+    <div class="role-buttons">
+      <button class="role-btn" onclick="selectStudent()"><span class="emoji">🎓</span><strong>Student</strong><span>Get a token and receive your digital food pass</span></button>
+      <button class="role-btn" onclick="showStaffLogin()"><span class="emoji">👨‍💼</span><strong>Staff Member</strong><span>Scan, authenticate and manage food collection</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="label">Staff Access</div><h2>Staff Member Login</h2>
+    <p>Enter the staff passcode to access the administration panel.</p>
+    <label for="passcode">Passcode</label>
+    <input type="password" id="passcode" placeholder="Enter passcode" onkeydown="if(event.key==='Enter')staffLogin()">
+    <div class="error" id="loginError"></div>
+    <button class="primary" onclick="staffLogin()">Login to Admin Panel</button>
+    <button class="back-btn" onclick="backToWelcome()">← Back to role selection</button>
+  </div>
+</section>
+
+<section class="app-content" id="appContent">
+  <section class="hero">
+    <h1>Campus Digital Queue</h1>
+    <p>Simple, fast and transparent queue management for students and campus staff.</p>
+    <div class="role-badge" id="roleBadge">Student View</div>
+  </section>
+
+  <section class="grid">
+    <div class="card wide">
+      <div class="label">Live Dashboard</div><h2>Current Token Being Served</h2>
+      <div class="token" id="currentToken">C-100</div>
+      <div class="stats">
+        <div class="stat"><strong id="queueCount">0</strong><span>Students in Queue</span></div>
+        <div class="stat"><strong id="servedCount">0</strong><span>Tokens Served</span></div>
+      </div>
+    </div>
+
+    <div class="card" id="studentCard">
+      <div class="label">Student Portal</div><h2>Get Your Token</h2>
+      <p class="desc">Join the digital queue and receive a ticket for entry authentication.</p>
+      <button class="primary" onclick="getToken()">Get Token</button>
+
+      <div class="result" id="studentResult">
+        <div>Your Active Ticket</div>
+        <div class="result-token" id="myToken">C-101</div>
+        <div class="wait" id="waitTime">Estimated Wait: 0 minutes</div>
+
+        <div class="ticket" id="awaitingTicket">
+          <div style="font-weight:900">DIGITAL ENTRY TICKET</div>
+          <div class="qr-box" id="qrBox" title="Student QR Code"></div>
+          <div class="ticket-message">Step 1: Present this to the Entry Staff for scanning.</div>
+          <div class="awaiting">🔴 Status: Awaiting Entry Scan</div>
+        </div>
+
+        <div class="digital-pass" id="digitalPass">
+          <h3>✅ PERMITTED / AUTHENTICATED</h3>
+          <div class="pass-token" id="passToken">C-101</div>
+          <p>Show this screen to the counter staff to claim your food.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="staffCard">
+      <div class="label">Staff Admin Panel</div>
+      <h2>Gatekeeper & Counter Control</h2>
+      <p class="desc">Scan a student's token, authenticate their entry, and complete food collection.</p>
+
+      <div class="scanner">
+        <label for="scanInput">Simulate QR Scan</label>
+        <input class="scanner-input" id="scanInput" placeholder="Type Token Number here, e.g., C-101" onkeydown="if(event.key==='Enter')scanToken()">
+        <button class="scan-btn" style="margin-top:9px" onclick="openCamera()">📷 Scan Code with Camera</button>
+        <div id="cameraPanel" style="display:none;margin-top:14px;padding:12px;background:#10251d;border-radius:16px">
+          <video id="cameraVideo" autoplay playsinline style="width:100%;border-radius:11px;display:block;background:#000"></video>
+          <canvas id="cameraCanvas" style="display:none"></canvas>          <div id="cameraStatus" style="color:#d8f5e8;font-size:.82rem;text-align:center;margin:9px 0">Point the camera at a student QR code.</div>
+          <button class="handover-btn" onclick="closeCamera()" style="width:100%">Close Camera</button>
+        </div>
+
+        <div class="verification" id="verification">
+          <div class="valid" id="verificationText">Token Detected: C-101 | Status: Valid | Match Found.</div>
+          <button class="approve-btn" onclick="approveToken()">Approve & Authenticate</button>
+        </div>
+      </div>
+
+      <div class="ready-list">
+        <h3>Authenticated - Ready for Food Collection</h3>
+        <div id="readyList"><div class="empty">No authenticated students yet.</div></div>
+      </div>
+
+      <div class="queue-list" id="queueList">
+        <div class="queue-item"><span>No students waiting</span><span>—</span></div>
+      </div>
+    </div>
+  </section>
+  <footer>CampusQueue • Digital Queue Management System • Demo Version</footer>
+</section>
+</main>
+
+<script>
+const STAFF_PASSCODE="admin123";
+let nextNumber=101,currentNumber=100,served=0,queue=[];
+let authenticated=[];
+let currentScanToken=null;
+let studentActiveToken=null;
+let studentEmail="";
+
+function selectStudent(){showApp("student")}
+function showStaffLogin(){
+  document.getElementById("welcomeScreen").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("passcode").value="";
+  document.getElementById("loginError").textContent="";
+  setTimeout(()=>document.getElementById("passcode").focus(),100);
+}
+function staffLogin(){
+  if(document.getElementById("passcode").value===STAFF_PASSCODE) showApp("staff");
+  else document.getElementById("loginError").textContent="Incorrect passcode. Please try again.";
+}
+function showApp(role){
+  document.getElementById("welcomeScreen").style.display="none";
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("appContent").style.display="block";
+  document.getElementById("switchBtn").style.display="block";
+  document.getElementById("studentCard").style.display=role==="student"?"block":"none";
+  document.getElementById("staffCard").style.display=role==="staff"?"block":"none";
+  document.getElementById("roleBadge").textContent=role==="student"?"Student View":"Staff Administration View";
+  updateDashboard();
+}
+function backToWelcome(){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("welcomeScreen").style.display="flex";
+}
+function logout(){
+  closeCamera();
+  document.getElementById("appContent").style.display="none";
+  document.getElementById("switchBtn").style.display="none";
+  document.getElementById("welcomeScreen").style.display="flex";
+  document.getElementById("passcode").value="";
+  document.getElementById("loginError").textContent="";
+}
+
+let cameraStream=null;
+let cameraTimer=null;
+
+function openCamera(){
+  const panel=document.getElementById("cameraPanel");
+  panel.style.display="block";
+  const status=document.getElementById("cameraStatus");
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    status.textContent="Camera access is unavailable here. Open this website through HTTPS or localhost, then try again.";
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false})
+    .then(stream=>{
+      cameraStream=stream;
+      const video=document.getElementById("cameraVideo");
+      video.srcObject=stream;
+      status.textContent="Camera active — point it at the student's QR code.";
+      cameraTimer=setInterval(scanCameraFrame,300);
+    })
+    .catch(err=>{
+      status.textContent="Camera permission was blocked. Allow camera access in Chrome and try again.";
+      console.error(err);
+    });
+}
+
+function scanCameraFrame(){
+  const video=document.getElementById("cameraVideo");
+  const canvas=document.getElementById("cameraCanvas");
+  if(video.readyState<2 || video.videoWidth===0) return;
+
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const image=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  if(typeof jsQR==="function"){
+    const result=jsQR(image.data,image.width,image.height);
+    if(result && result.data){
+      const token=result.data.trim().toUpperCase();
+      if(/^C-\d+$/.test(token)){
+        document.getElementById("scanInput").value=token;
+        closeCamera();
+        scanToken();
+      }
+    }
+  }
+}
+
+function closeCamera(){
+  if(cameraTimer){clearInterval(cameraTimer);cameraTimer=null;}
+  if(cameraStream){
+    cameraStream.getTracks().forEach(track=>track.stop());
+    cameraStream=null;
+  }
+  const video=document.getElementById("cameraVideo");
+  if(video) video.srcObject=null;
+  document.getElementById("cameraPanel").style.display="none";
+}
+
+
+
+function sendApprovalEmail(){
+  if(!studentEmail || !studentActiveToken){
+    alert("Student email or token is missing.");
+    return;
+  }
+
+  const subject = "Campus Queue Approval - " + studentActiveToken;
+  const body =
+    "Campus Queue Management System\n\n" +
+    "Your token " + studentActiveToken + " has been AUTHENTICATED by the admin.\n\n" +
+    "You may now show this confirmation to the counter staff to collect your food.\n\n" +
+    "Authenticated at: " + new Date().toLocaleString();
+
+  // Opens Gmail's compose window with the recipient, subject and message pre-filled.
+  const gmailUrl =
+    "https://mail.google.com/mail/?view=cm&fs=1&to=" +
+    encodeURIComponent(studentEmail) +
+    "&su=" + encodeURIComponent(subject) +
+    "&body=" + encodeURIComponent(body);
+
+  window.open(gmailUrl, "_blank");
+}
+
+function downloadStudentQR(){
+  const canvas = document.querySelector("#qrBox canvas");
+  const img = document.querySelector("#qrBox img");
+
+  if(canvas){
+    const link = document.createElement("a");    link.download = (studentActiveToken || "student-token") + "-QR.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  } else if(img){
+    const link = document.createElement("a");
+    link.download = (studentActiveToken || "student-token") + "-QR.png";
+    link.href = img.src;
+    link.click();
+  } else {
+    alert("QR code is not ready yet. Please generate your token first.");
+  }
+}
+
+function updateDashboard(){
+  document.getElementById("currentToken").textContent="C-"+currentNumber;
+  document.getElementById("queueCount").textContent=queue.length;
+  document.getElementById("servedCount").textContent=served;
+
+  const list=document.getElementById("queueList");
+  if(!queue.length){list.innerHTML='<div class="queue-item"><span>No students waiting</span><span>—</span></div>'}
+  else list.innerHTML=queue.map((token,i)=>`<div class="queue-item"><span>${token}</span><span>${i+1} ahead</span></div>`).join("");
+
+  const ready=document.getElementById("readyList");
+  if(!authenticated.length){ready.innerHTML='<div class="empty">No authenticated students yet.</div>'}
+  else ready.innerHTML=authenticated.map(token=>`
+    <div class="ready-item">
+      <div class="ready-item-top"><span class="ready-token">${token}</span><span class="ready-status">✓ AUTHENTICATED</span></div>
+      <button class="handover-btn" onclick="handoverFood('${token}')">Mark Food Handed Over</button>
+    </div>`).join("");
+}
+
+function saveStudentTicket(){
+  if(studentActiveToken){
+    localStorage.setItem("campusActiveToken", studentActiveToken);
+    localStorage.setItem("campusStudentEmail", studentEmail);
+  }
+}
+
+function restoreStudentTicket(){
+  const savedToken = localStorage.getItem("campusActiveToken");
+  const savedEmail = localStorage.getItem("campusStudentEmail");
+
+  if(savedToken && savedEmail){
+    studentActiveToken = savedToken;
+    studentEmail = savedEmail;
+
+    const emailBox = document.getElementById("studentEmail");
+    if(emailBox) emailBox.value = savedEmail;
+
+    // Keep the ticket locked locally until the token is completed.
+    if(!queue.includes(savedToken) && !authenticated.includes(savedToken)){
+      queue.push(savedToken);
+    }
+
+    const tokenEl = document.getElementById("ticketToken");
+    if(tokenEl) tokenEl.textContent = savedToken;
+
+    const downloadBtn = document.getElementById("downloadQrBtn");
+    if(downloadBtn) downloadBtn.style.display = "block";
+
+    const awaiting = document.getElementById("awaitingTicket");
+    if(awaiting) awaiting.style.display = "block";
+
+    updateDashboard();
+  }
+}
+
+function clearStudentTicket(){
+  localStorage.removeItem("campusActiveToken");
+  localStorage.removeItem("campusStudentEmail");
+  studentActiveToken = null;
+  studentEmail = "";
+}
+
+function getToken(){
+  if(studentActiveToken && !authenticated.includes(studentActiveToken) && queue.includes(studentActiveToken)){
+    alert("You already have an active ticket: "+studentActiveToken);
+    return;
+  }
+  const token="C-"+nextNumber++;
+  const peopleAhead=queue.length;
+  queue.push(token);
+  studentActiveToken=token;
+  document.getElementById("myToken").textContent=token;
+  document.getElementById("passToken").textContent=token;
+  document.getElementById("waitTime").textContent="Estimated Wait: "+(peopleAhead*3)+" minutes";
+  document.getElementById("studentResult").classList.add("show");
+  document.getElementById("awaitingTicket").style.display="block";
+  const qrBox=document.getElementById("qrBox");
+  qrBox.innerHTML="";
+  if(typeof QRCode==="function"){
+    new QRCode(qrBox,{text:token,width:130,height:130,colorDark:"#17352a",colorLight:"#ffffff"});
+  }
+  document.getElementById("digitalPass").classList.remove("show");
+  updateDashboard();
+}
+function scanToken(){
+  const raw=document.getElementById("scanInput").value.trim().toUpperCase();
+  const token=raw;
+  currentScanToken=null;
+  document.getElementById("verification").classList.remove("show");
+
+  if(!/^C-\d+$/.test(token)){
+    alert("Please enter a valid token number, for example C-101.");
+    return;
+  }
+  if(authenticated.includes(token)){
+    alert("This token has already been authenticated.");
+    return;
+  }
+  if(!queue.includes(token)){
+    alert("Token not found in the active queue.");
+    return;
+  }
+
+  currentScanToken=token;
+  document.getElementById("verificationText").textContent=
+    "Token Detected: "+token+" | Status: Valid | Match Found.";
+  document.getElementById("verification").classList.add("show");
+}
+function approveToken(){
+  if(!currentScanToken) return;
+  const token=currentScanToken;
+
+  queue=queue.filter(t=>t!==token);
+  authenticated.push(token);
+  currentScanToken=null;
+  document.getElementById("verification").classList.remove("show");
+  document.getElementById("scanInput").value="";
+
+  // If this is the ticket being viewed in the student screen, transform it.
+  if(studentActiveToken===token){
+    document.getElementById("awaitingTicket").style.display="none";
+    document.getElementById("digitalPass").classList.add("show");
+  }
+
+  updateDashboard();
+  alert(token+" has been approved and authenticated.");
+}
+function handoverFood(token){
+  authenticated=authenticated.filter(t=>t!==token);
+  served++;
+  if(studentActiveToken===token){
+    studentActiveToken=null;
+    document.getElementById("studentResult").classList.remove("show");
+  }
+  if(currentNumber<parseInt(token.split("-")[1])) currentNumber=parseInt(token.split("-")[1]);
+  updateDashboard();
+}
+updateDashboard();
+</script>
+</body>
+</html>
