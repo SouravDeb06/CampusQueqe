@@ -64,6 +64,36 @@ footer{text-align:center;color:#7b8c85;font-size:.85rem;margin-top:35px}
 }
 .notify-title{font-weight:800;font-size:16px;margin-bottom:5px}
 .notify-time{font-size:12px;margin-top:6px;opacity:.75}
+
+/* Live Food Inventory */
+.inventory-dashboard{margin-bottom:28px}
+.inventory-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}
+.inventory-head h2{font-size:1.55rem;margin:0}
+.inventory-head p{color:#71837b;font-size:.9rem;margin-top:4px}
+.inventory-list{list-style:none;display:grid;gap:12px}
+.inventory-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:16px;background:#fff;border:1px solid #dcebe4;border-radius:16px;padding:16px 18px;box-shadow:0 7px 20px rgba(19,70,50,.06)}
+.inventory-food{font-weight:800;color:#17352a}
+.inventory-status{display:inline-flex;align-items:center;justify-content:center;padding:7px 11px;border-radius:999px;font-size:.76rem;font-weight:900;white-space:nowrap}
+.status-available{background:#e8f8ef;color:#087f5b}
+.status-low{background:#fff7df;color:#9a6900}
+.status-sold{background:#f5eeee;color:#a33a35}
+.inventory-plates{font-weight:900;color:#17352a;white-space:nowrap}
+.inventory-plates span{color:#71837b;font-weight:600}
+.menu-management{margin-top:22px}
+.menu-row{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #edf3f0}
+.menu-row:last-child{border-bottom:0}
+.menu-row strong{display:block}
+.menu-row small{color:#71837b}
+.menu-row input{width:100%;padding:11px;border:1px solid #cfe1d9;border-radius:10px;font-size:1rem}
+.menu-row button{background:#087f5b;color:#fff;border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;white-space:nowrap}
+.menu-updated{font-size:.82rem;color:#087f5b;margin-top:12px;min-height:18px}
+@media(max-width:700px){
+ .inventory-head{align-items:flex-start;flex-direction:column}
+ .inventory-item{grid-template-columns:1fr auto}
+ .inventory-status{justify-self:start}
+ .inventory-plates{grid-column:1/-1}
+ .menu-row{grid-template-columns:1fr}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">window.addEventListener("load", restoreStudentTicket);\n</script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -81,6 +111,17 @@ footer{text-align:center;color:#7b8c85;font-size:.85rem;margin-top:35px}
 <main>
 <section class="welcome-screen" id="welcomeScreen">
   <div class="welcome-card">
+
+    <section class="inventory-dashboard" aria-label="Live Food Inventory Dashboard">
+      <div class="inventory-head">
+        <div>
+          <h2>🍲 Today's Menu &amp; Live Plate Counter</h2>
+          <p>Live availability shown before entering the Student or Staff view.</p>
+        </div>
+      </div>
+      <ul class="inventory-list" id="publicInventoryList"></ul>
+    </section>
+
     <div class="welcome-icon">🏫</div>
     <h1>Welcome to CampusQueue</h1>
     <p>Digital queue and food authentication for students and campus staff.</p>
@@ -167,6 +208,15 @@ footer{text-align:center;color:#7b8c85;font-size:.85rem;margin-top:35px}
         </div>
       </div>
 
+
+      <div class="menu-management">
+        <div class="label">Authenticated Staff Only</div>
+        <h2>Menu Management</h2>
+        <p class="desc">Update plate counts for today's menu. Changes are reflected on the public homepage dashboard.</p>
+        <div id="menuManagementList"></div>
+        <div class="menu-updated" id="menuUpdated"></div>
+      </div>
+
       <div class="ready-list">
         <h3>Authenticated - Ready for Food Collection</h3>
         <div id="readyList"><div class="empty">No authenticated students yet.</div></div>
@@ -189,6 +239,52 @@ let currentScanToken=null;
 let studentActiveToken=null;
 let studentEmail="";
 
+const defaultInventory=[
+  {id:"paneer",name:"🍛 Paneer Butter Masala with Rice",plates:45},
+  {id:"burger",name:"🍔 Veg Cheese Burger & Fries",plates:12},
+  {id:"pizza",name:"🍕 Mini Veg Pizza",plates:0}
+];
+let inventory=JSON.parse(localStorage.getItem("campusInventory")||"null")||defaultInventory.map(x=>({...x}));
+
+function inventoryStatus(plates){
+  if(plates<=0) return {label:"SOLD OUT",className:"status-sold"};
+  if(plates<=15) return {label:"Running Low",className:"status-low"};
+  return {label:"Available",className:"status-available"};
+}
+function renderPublicInventory(){
+  const list=document.getElementById("publicInventoryList");
+  if(!list) return;
+  list.innerHTML=inventory.map(item=>{
+    const s=inventoryStatus(item.plates);
+    return '<li class="inventory-item"><div class="inventory-food">'+item.name+
+      '</div><span class="inventory-status '+s.className+'">['+s.label+']</span>'+
+      '<div class="inventory-plates">'+item.plates+' <span>Plates Left</span></div></li>';
+  }).join("");
+}
+function renderMenuManagement(){
+  const list=document.getElementById("menuManagementList");
+  if(!list) return;
+  list.innerHTML=inventory.map(item=>
+    '<div class="menu-row"><div><strong>'+item.name+'</strong><small>Current: '+item.plates+' plates</small></div>'+
+    '<input type="number" min="0" step="1" id="inv-'+item.id+'" value="'+item.plates+'" aria-label="Plates remaining for '+item.name+'">'+
+    '<button onclick="updateInventory(\''+item.id+'\')">Update Inventory</button></div>'
+  ).join("");
+}
+function updateInventory(id){
+  const input=document.getElementById("inv-"+id);
+  const value=Math.max(0,parseInt(input.value,10)||0);
+  const item=inventory.find(x=>x.id===id);
+  if(!item) return;
+  item.plates=value;
+  localStorage.setItem("campusInventory",JSON.stringify(inventory));
+  renderPublicInventory();
+  renderMenuManagement();
+  const msg=document.getElementById("menuUpdated");
+  if(msg) msg.textContent=item.name+" inventory updated to "+value+" plates.";
+}
+renderPublicInventory();
+
+
 function selectStudent(){showApp("student")}
 function showStaffLogin(){
   document.getElementById("welcomeScreen").style.display="none";
@@ -210,6 +306,7 @@ function showApp(role){
   document.getElementById("staffCard").style.display=role==="staff"?"block":"none";
   document.getElementById("roleBadge").textContent=role==="student"?"Student View":"Staff Administration View";
   updateDashboard();
+  if(role==="staff") renderMenuManagement();
 }
 function backToWelcome(){
   document.getElementById("loginScreen").style.display="none";
@@ -466,6 +563,7 @@ function handoverFood(token){
   updateDashboard();
 }
 updateDashboard();
+renderPublicInventory();
 </script>
 </body>
 </html>
